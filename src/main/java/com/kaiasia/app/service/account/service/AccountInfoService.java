@@ -1,5 +1,4 @@
-package com.kaiasia.app.service.account.service;//package com.kaiasia.app.service.account.service;
-
+package com.kaiasia.app.service.account.service;
 
 import com.kaiasia.app.core.utils.ApiConstant;
 import com.kaiasia.app.core.utils.GetErrorUtils;
@@ -7,6 +6,7 @@ import com.kaiasia.app.register.KaiMethod;
 import com.kaiasia.app.register.KaiService;
 import com.kaiasia.app.register.Register;
 import com.kaiasia.app.service.account.exception.ExceptionHandler;
+import com.kaiasia.app.service.account.model.request.Account2In;
 import com.kaiasia.app.service.account.model.request.AccountIn;
 import com.kaiasia.app.service.account.model.response.AccountOut;
 import com.kaiasia.app.service.account.model.response.Auth1Out;
@@ -21,6 +21,7 @@ import ms.apiclient.authen.AuthRequest;
 import ms.apiclient.authen.AuthTakeSessionResponse;
 import ms.apiclient.authen.AuthenClient;
 import ms.apiclient.model.*;
+import ms.apiclient.t24util.T24AccountInfoResponse;
 import ms.apiclient.t24util.T24CustomerAccountResponse;
 import ms.apiclient.t24util.T24Request;
 import ms.apiclient.t24util.T24UtilClient;
@@ -36,25 +37,24 @@ import java.util.concurrent.TimeUnit;
 @KaiService
 @Slf4j
 @RequiredArgsConstructor
-public class AccountService {
+public class AccountInfoService {
     private final GetErrorUtils apiErrorUtils;
     private final RedisTemplate<String, Object> redisTemplate;
     private final T24UtilClient t24UtilClient;
     private final ExceptionHandler exceptionHandler;
     private final AuthenClient authenClient;
 
-
-    @KaiMethod(name = "getAccList", type = Register.VALIDATE)
+    @KaiMethod(name = "getCURR_INFO", type = Register.VALIDATE)
     public ApiError validate(ApiRequest req) {
-        return ServiceUtils.validate(req, AccountIn.class, apiErrorUtils, "ENQUIRY");
+        return ServiceUtils.validate(req, Account2In.class, apiErrorUtils, "ENQUIRY");
     }
 
-    @KaiMethod(name = "getAccList")
+    @KaiMethod(name = "getCURR_INFO")
     public ApiResponse process(ApiRequest request) {
-        AccountIn requestData = ObjectAndJsonUtils.fromObject(request
+        Account2In requestData = ObjectAndJsonUtils.fromObject(request
                 .getBody()
-                .get("enquiry"), AccountIn.class);
-        String location = "AccountList-" + requestData.getSessionId() + "-" + System.currentTimeMillis();
+                .get("enquiry"), Account2In.class);
+        String location = "AccountInfo-" + requestData.getSessionId() + "-" + System.currentTimeMillis();
 
         return exceptionHandler.handle(req -> {
             ApiResponse response = new ApiResponse();
@@ -88,75 +88,59 @@ public class AccountService {
                 return response;
             }
             // Tạo cache key
-            String cacheKey = "Account:" + requestData.getSessionId() + ":" + requestData.getCustomerID();
+            String cacheKey = "AccountInfo:" + requestData.getSessionId() + ":" + requestData.getAccountID();
 
             // Kiểm tra cache
             ApiResponse cachedResponse = getCachedResponse(cacheKey);
             if (cachedResponse != null) {
-                log.info("Cache hit for account list: {}", cacheKey);
+                log.info("Cache hit for AccountInfo : {}", cacheKey);
                 return cachedResponse;
             }
 
             // Call T24 API
-            T24CustomerAccountResponse t24CustomerAccountResponse = t24UtilClient.getCustomerAccount(location,
+            T24AccountInfoResponse t24AccountInfoResponse = t24UtilClient.getAccountInfo(location,
                     T24Request.builder()
 //                            .customerId(requestData.getCustomerID())
-                            .customerId("281692")
+                            .accountId("281692")
                             .build(),
                     request.getHeader());
-            log.warn("{}", t24CustomerAccountResponse.getAccounts());
+            log.warn("{}", t24AccountInfoResponse.getAccountId());
             // **Error Handling for T24 Response**
-            if (Objects.nonNull(t24CustomerAccountResponse.getError()) && !ApiError.OK_CODE.equals(t24CustomerAccountResponse.getError().getCode())) {
-                log.error("Error calling T24 API for AccountInfo {} (session {}): {}", requestData.getCustomerID(), requestData.getSessionId(), t24CustomerAccountResponse.getError());
-                response.setError(t24CustomerAccountResponse.getError());
+            if (Objects.nonNull(t24AccountInfoResponse.getError()) && !ApiError.OK_CODE.equals(t24AccountInfoResponse.getError().getCode())) {
+                log.error("Error calling T24 API for AccountInfo {} (session {}): {}", requestData.getAccountID(), requestData.getSessionId(), t24AccountInfoResponse.getError());
+                response.setError(t24AccountInfoResponse.getError());
                 return response;
             }
 
-
+            HashMap<String, Object> params = new HashMap<>();
             // Kiểm tra kết quả trả về đủ field không.
-            HashMap<String, Object> enquiry = new HashMap<>();
-            for (Account account : t24CustomerAccountResponse.getAccounts()) {
-                BaseResponse validateT24Error = ServiceUtils.validate(ObjectAndJsonUtils.fromObject(account, AccountOut.class), SuccessGroup.class); // Validate từng Account với AccountOut
-                if (!validateT24Error.getCode().equals(ApiError.OK_CODE)) {
-                    log.error("{}:{}", location + "#After call T2405", validateT24Error);
-                    enquiry.put("status", ApiConstant.STATUS.ERROR);
-                    body.put("enquiry", enquiry);
-                    response.setBody(body);
-                    return response;
-                }
-            }
-            // Chuyển đổi dữ liệu sang List<HashMap>
-            List<HashMap<String, Object>> accountList = new ArrayList<>();
-            for (Account account : t24CustomerAccountResponse.getAccounts()) {
-                HashMap<String, Object> accountData = new HashMap<>();
-                accountData.put("customerID", account.getCustomerId());
-                accountData.put("accountType", account.getAccountType());
-                accountData.put("shortName", account.getShortName());
-                accountData.put("shortTitle", account.getShortTitle());
-                accountData.put("currency", account.getCurrency());
-                accountData.put("accountID", account.getAccountId());
-                accountData.put("customerType", "Vip");
-                accountData.put("altAccount", account.getAltAccount());
-                accountData.put("category", "1011");
-                accountData.put("company", account.getCompany());
-                accountData.put("availBal", "200021022");
-                accountData.put("productCode", "800");
-                accountData.put("accountStatus", account.getAccountStatus());
-                accountList.add(accountData);
+            BaseResponse validateT24Error = ServiceUtils.validate(ObjectAndJsonUtils.fromObject(t24AccountInfoResponse, Account2In.class), SuccessGroup.class);
+            if (!validateT24Error.getCode().equals(ApiError.OK_CODE)) {
+                log.error("{}:{}", location + "#After call T2405", validateT24Error);
+                params.put("status", ApiConstant.STATUS.ERROR);
+                return response;
             }
 
-            enquiry.put("accounts", accountList);
-            enquiry.put("status", "OK");
+            params.put("customerID", t24AccountInfoResponse.getCustomerId());
+            params.put("accountType", t24AccountInfoResponse.getAccountType());
+            params.put("shortName", t24AccountInfoResponse.getShortName());
+            params.put("shortTitle", t24AccountInfoResponse.getShortTitle());
+            params.put("currency", t24AccountInfoResponse.getCurrency());
+            params.put("accountID", t24AccountInfoResponse.getAccountId());
+            params.put("altAccount", t24AccountInfoResponse.getAltAccount());
+            params.put("category", t24AccountInfoResponse.getCategory());
+            params.put("company", t24AccountInfoResponse.getCompany());
+            params.put("availBal", t24AccountInfoResponse.getAvaiBalance());
+            params.put("productCode", t24AccountInfoResponse.getProductCode());
 
-            header.setReqType("RESPONSE");
-            body.put("enquiry", enquiry);
+            body.put("enquiry", params);
             response.setBody(body);
 
             // Lưu vào cache
             cacheResponse(cacheKey, response);
 
             return response;
-        }, request, "AccountList/" + requestData.getSessionId() + "/" + System.currentTimeMillis());
+        }, request, "AccountInfo/" + requestData.getSessionId() + "/" + System.currentTimeMillis());
     }
 
     private ApiResponse getCachedResponse(String cacheKey) {
@@ -174,9 +158,9 @@ public class AccountService {
     private void cacheResponse(String cacheKey, ApiResponse response) {
         try {
             redisTemplate.opsForValue().set(cacheKey, response, 30, TimeUnit.MINUTES); // Lưu cache trong 30 phút
-            log.info("Account list cached with key: {}", cacheKey);
+            log.info("Account info cached with key: {}", cacheKey);
         } catch (Exception e) {
-            log.error("Error while caching account list: {}", e.getMessage());
+            log.error("Error while caching account info: {}", e.getMessage());
         }
     }
 }
