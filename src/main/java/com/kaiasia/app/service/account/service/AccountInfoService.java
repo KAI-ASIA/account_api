@@ -100,11 +100,11 @@ public class AccountInfoService {
             // Call T24 API
             T24AccountInfoResponse t24AccountInfoResponse = t24UtilClient.getAccountInfo(location,
                     T24Request.builder()
-//                            .customerId(requestData.getCustomerID())
-                            .accountId("281692")
+                            .customerId(requestData.getAccountID())
+//                            .accountId("281692")
                             .build(),
                     request.getHeader());
-            log.warn("{}", t24AccountInfoResponse.getAccountId());
+            log.warn("{}", t24AccountInfoResponse.getCustomerId());
             // **Error Handling for T24 Response**
             if (Objects.nonNull(t24AccountInfoResponse.getError()) && !ApiError.OK_CODE.equals(t24AccountInfoResponse.getError().getCode())) {
                 log.error("Error calling T24 API for AccountInfo {} (session {}): {}", requestData.getAccountID(), requestData.getSessionId(), t24AccountInfoResponse.getError());
@@ -113,14 +113,6 @@ public class AccountInfoService {
             }
 
             HashMap<String, Object> params = new HashMap<>();
-            // Kiểm tra kết quả trả về đủ field không.
-            BaseResponse validateT24Error = ServiceUtils.validate(ObjectAndJsonUtils.fromObject(t24AccountInfoResponse, Account2In.class), SuccessGroup.class);
-            if (!validateT24Error.getCode().equals(ApiError.OK_CODE)) {
-                log.error("{}:{}", location + "#After call T2405", validateT24Error);
-                params.put("status", ApiConstant.STATUS.ERROR);
-                return response;
-            }
-
             params.put("customerID", t24AccountInfoResponse.getCustomerId());
             params.put("accountType", t24AccountInfoResponse.getAccountType());
             params.put("shortName", t24AccountInfoResponse.getShortName());

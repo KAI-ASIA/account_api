@@ -113,19 +113,7 @@ public class AccountService {
             }
 
 
-            // Kiểm tra kết quả trả về đủ field không.
             HashMap<String, Object> enquiry = new HashMap<>();
-            for (Account account : t24CustomerAccountResponse.getAccounts()) {
-                BaseResponse validateT24Error = ServiceUtils.validate(ObjectAndJsonUtils.fromObject(account, AccountOut.class), SuccessGroup.class); // Validate từng Account với AccountOut
-                if (!validateT24Error.getCode().equals(ApiError.OK_CODE)) {
-                    log.error("{}:{}", location + "#After call T2405", validateT24Error);
-                    enquiry.put("status", ApiConstant.STATUS.ERROR);
-                    body.put("enquiry", enquiry);
-                    response.setBody(body);
-                    return response;
-                }
-            }
-            // Chuyển đổi dữ liệu sang List<HashMap>
             List<HashMap<String, Object>> accountList = new ArrayList<>();
             for (Account account : t24CustomerAccountResponse.getAccounts()) {
                 HashMap<String, Object> accountData = new HashMap<>();
