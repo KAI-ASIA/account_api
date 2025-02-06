@@ -161,7 +161,7 @@ public class AccountService {
 
     private void cacheResponse(String cacheKey, ApiResponse response) {
         try {
-            redisTemplate.opsForValue().set(cacheKey, response, 30, TimeUnit.MINUTES); // Lưu cache trong 30 phút
+            redisTemplate.opsForValue().set(cacheKey, ObjectAndJsonUtils.toJson(response), 30, TimeUnit.MINUTES); // Lưu cache trong 30 phút
             log.info("Account list cached with key: {}", cacheKey);
         } catch (Exception e) {
             log.error("Error while caching account list: {}", e.getMessage());
