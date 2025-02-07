@@ -11,7 +11,7 @@
     </parent>
     <groupId>com.kaiasia</groupId>
     <artifactId>app</artifactId>
-    <version>20241209</version>
+    <version>20241210</version>
     <name>app</name>
     <description>Funds Transfer Api</description>
     <properties>
