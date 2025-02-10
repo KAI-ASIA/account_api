@@ -100,8 +100,8 @@ public class AccountService {
             // Call T24 API
             T24CustomerAccountResponse t24CustomerAccountResponse = t24UtilClient.getCustomerAccount(location,
                     T24Request.builder()
-//                            .customerId(requestData.getCustomerID())
-                            .customerId("281692")
+                            .customerId(requestData.getCustomerID())
+//                            .customerId("281692")
                             .build(),
                     request.getHeader());
             log.warn("{}", t24CustomerAccountResponse.getAccounts());

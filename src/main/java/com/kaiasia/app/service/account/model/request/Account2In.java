@@ -20,6 +20,6 @@ public class Account2In {
     @NotBlank(message = "Session ID is required")
     private String sessionId;
     @NotBlank(message = "Account ID is required")
-    private String accountID;
+    private String accountId;
 
 }

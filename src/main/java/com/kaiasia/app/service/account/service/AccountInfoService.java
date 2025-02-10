@@ -1,14 +1,11 @@
 package com.kaiasia.app.service.account.service;
 
-import com.kaiasia.app.core.utils.ApiConstant;
 import com.kaiasia.app.core.utils.GetErrorUtils;
 import com.kaiasia.app.register.KaiMethod;
 import com.kaiasia.app.register.KaiService;
 import com.kaiasia.app.register.Register;
 import com.kaiasia.app.service.account.exception.ExceptionHandler;
 import com.kaiasia.app.service.account.model.request.Account2In;
-import com.kaiasia.app.service.account.model.request.AccountIn;
-import com.kaiasia.app.service.account.model.response.AccountOut;
 import com.kaiasia.app.service.account.model.response.Auth1Out;
 import com.kaiasia.app.service.account.model.response.BaseResponse;
 import com.kaiasia.app.service.account.model.validation.SuccessGroup;
@@ -16,21 +13,17 @@ import com.kaiasia.app.service.account.utils.ObjectAndJsonUtils;
 import com.kaiasia.app.service.account.utils.ServiceUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ms.apiclient.account.Account;
 import ms.apiclient.authen.AuthRequest;
 import ms.apiclient.authen.AuthTakeSessionResponse;
 import ms.apiclient.authen.AuthenClient;
 import ms.apiclient.model.*;
 import ms.apiclient.t24util.T24AccountInfoResponse;
-import ms.apiclient.t24util.T24CustomerAccountResponse;
 import ms.apiclient.t24util.T24Request;
 import ms.apiclient.t24util.T24UtilClient;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.client.RestClientException;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -88,7 +81,7 @@ public class AccountInfoService {
                 return response;
             }
             // Tạo cache key
-            String cacheKey = "AccountInfo:" + requestData.getSessionId() + ":" + requestData.getAccountID();
+            String cacheKey = "AccountInfo:" + requestData.getSessionId() + ":" + requestData.getAccountId();
 
             // Kiểm tra cache
             ApiResponse cachedResponse = getCachedResponse(cacheKey);
@@ -100,14 +93,13 @@ public class AccountInfoService {
             // Call T24 API
             T24AccountInfoResponse t24AccountInfoResponse = t24UtilClient.getAccountInfo(location,
                     T24Request.builder()
-                            .customerId(requestData.getAccountID())
-//                            .accountId("281692")
+                            .accountId(requestData.getAccountId())
                             .build(),
                     request.getHeader());
-            log.warn("{}", t24AccountInfoResponse.getCustomerId());
+            log.warn("{}", t24AccountInfoResponse.getAccountId());
             // **Error Handling for T24 Response**
             if (Objects.nonNull(t24AccountInfoResponse.getError()) && !ApiError.OK_CODE.equals(t24AccountInfoResponse.getError().getCode())) {
-                log.error("Error calling T24 API for AccountInfo {} (session {}): {}", requestData.getAccountID(), requestData.getSessionId(), t24AccountInfoResponse.getError());
+                log.error("Error calling T24 API for AccountInfo {} (session {}): {}", requestData.getAccountId(), requestData.getSessionId(), t24AccountInfoResponse.getError());
                 response.setError(t24AccountInfoResponse.getError());
                 return response;
             }
@@ -118,7 +110,7 @@ public class AccountInfoService {
             params.put("shortName", t24AccountInfoResponse.getShortName());
             params.put("shortTitle", t24AccountInfoResponse.getShortTitle());
             params.put("currency", t24AccountInfoResponse.getCurrency());
-            params.put("accountID", t24AccountInfoResponse.getAccountId());
+            params.put("accountId", t24AccountInfoResponse.getAccountId());
             params.put("altAccount", t24AccountInfoResponse.getAltAccount());
             params.put("category", t24AccountInfoResponse.getCategory());
             params.put("company", t24AccountInfoResponse.getCompany());

@@ -22,7 +22,7 @@ public class Account2Out extends BaseResponse {
     private String shortName;
     private String shortTitle;
     private String currency;
-    private String accountID;
+    private String accountId;
     private String altAccount;
     private String category;
     private String company;
